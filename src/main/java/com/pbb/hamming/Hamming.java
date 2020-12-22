@@ -1,13 +1,10 @@
 package com.pbb.hamming;
 
-import java.math.BigDecimal;
+
 import java.util.ArrayList;
 
 
 public class Hamming {
-    // 预处理
-    static Integer [] bi = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024};
-
     // 用以存海明码
     static int[] hamming;
 
@@ -17,8 +14,14 @@ public class Hamming {
     // P - 接受方可以通过 P 得知一位错在哪
     static ArrayList<Integer> P;
 
+    // 奇偶校验位
+    static int even, flag = 0, tail;
+
+    static String position;
+
     /**
      * 初始化映射，第一个明文映射到第三个位置，第二个明文映射到第五个位置...
+     *
      * @param len 明文长度
      */
     static void initmapping(int len) {
@@ -26,7 +29,7 @@ public class Hamming {
         int count = 3;
         int index = 2;
         for (int i = 1; i <= len; i++) {
-            if (count == bi[index]) {
+            if (count == (int) Math.pow(2, index)) {
                 count++;
                 index++;
             }
@@ -37,18 +40,23 @@ public class Hamming {
 
     /**
      * 获得 k 值，即 P 的个数
+     *
      * @param origin 编码前的原文
      * @return k 值
      */
     static Integer getK(String origin) {
-        double tmp = Math.ceil(Math.log(origin.length()) / Math.log(2));
-        if (tmp + origin.length() + 1 <= Math.pow(2, tmp))
+        int len = origin.length();
+        if (len == 1) return 2;
+        else if (len == 2) return 3;
+        double tmp = Math.ceil(Math.log(len) / Math.log(2));
+        if (tmp + len + 1 <= Math.pow(2, tmp))
             return (int) tmp;
         return (int) tmp + 1;
     }
 
     /**
      * 获得在解码中的 k 值
+     *
      * @param origin 海明码
      * @return k 值
      */
@@ -58,6 +66,7 @@ public class Hamming {
 
     /**
      * 将明文塞入 hamming 数组后，计算 P
+     *
      * @param k P 的个数
      */
     static void initP(int k) {
@@ -74,21 +83,27 @@ public class Hamming {
 
     /**
      * 将 hamming 数组转换成 string 类型
-     * @param origin 收到的反转后的海明码字符串
+     *
      * @return 海明码
      */
-    static String show(String origin) {
+    static String show() {
         StringBuilder sb = new StringBuilder();
+        int sum = 0;
         for (int i : hamming) {
+            sum += i;
             sb.append(i);
         }
         sb.deleteCharAt(0).reverse();
 
+        // 偶校验
+        if (sum % 2 == 0) sb.append(0);
+        else sb.append(1);
         return sb.toString();
     }
 
     /**
      * 海明码的编码
+     *
      * @param origin 编码前的原文
      * @return 海明码
      */
@@ -102,13 +117,14 @@ public class Hamming {
         }
         initP(k);
         for (int i = 0; i < k; i++) {
-            hamming[bi[i]] = P.get(i);
+            hamming[(int) Math.pow(2, i)] = P.get(i);
         }
-        return show(origin);
+        return show();
     }
 
     /**
      * 可能的明文字符串
+     *
      * @param origin 收到的反转后的海明码字符串
      * @return 获得明文字符串（可能含有错误）
      */
@@ -123,14 +139,15 @@ public class Hamming {
 
     /**
      * 可能的 P
+     *
      * @param origin 收到的反转后的海明码
-     * @param k P 的个数
+     * @param k      P 的个数
      * @return 可能的 P
      */
     static String getPs(String origin, int k) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < k; i++) {
-            sb.append(origin.charAt(bi[i] - 1));
+            sb.append(origin.charAt((int) Math.pow(2, i) - 1));
         }
         return sb.reverse().toString();
     }
@@ -147,6 +164,7 @@ public class Hamming {
 
     /**
      * 字符串异或操作，我很想知道 C++ 异或更容易的写法？
+     *
      * @param a 第一个字符串
      * @param b 第二个字符串
      * @return 异或后的结果
@@ -160,16 +178,29 @@ public class Hamming {
         return sb.toString();
     }
 
+    static void checkEven(String origin) {
+        int sum = 0;
+        for (int i = 0; i < origin.length(); i++) {
+            sum += (origin.charAt(i) - '0');
+        }
+        if (sum % 2 == 0) even = 0;
+        else even = 1;
+    }
+
     /**
      * 海明码的解码
+     *
      * @param origin 收到的海明码
      * @return 可能的错误的位置
      */
-    public static String decode(String origin) {
+    public static void decode(String origin) {
+        checkEven(origin);
+        int len = origin.length() - 1;
+        tail = origin.charAt(len) - '0';
+        origin = origin.substring(0, len);
         origin = new StringBuilder(origin).reverse().toString();
-
         Integer k = getDecodeK(origin);
-        initmapping(origin.length() - k);
+        initmapping(len - k);
         String Ds = getDs(origin);
 
         String Ps = getPs(origin, k);
@@ -178,11 +209,12 @@ public class Hamming {
             hamming[mapping.get(i)] = Integer.parseInt(String.valueOf(Ds.charAt(i)));
         }
         initP(k);
-        return ORX(Ps, getNewPs());
+        position =  ORX(Ps, getNewPs());
     }
 
     /**
      * 二进制转换成十进制
+     *
      * @param str 解码所得到的错误的位置
      * @return 十进制的位置
      */
@@ -198,26 +230,40 @@ public class Hamming {
 
     /**
      * 正确的海明码
+     *
      * @param origin 收到的海明码
      * @return 正确的海明码
      */
     public static String truth(String origin) {
+        flag = 0;
+        decode(origin);
+        int pos = bitoDe(position);
+        int length = origin.length();
+        origin = origin.substring(0, length - 1);
         StringBuilder sb = new StringBuilder(origin);
         int len = origin.length();
-        int pos = bitoDe(decode(origin));
+
 
         if (pos != 0) {
-
+            if (even == 0) {
+                // TODO: 有两位错
+                flag = 2;
+            } else flag = 1;
             sb.replace(len - pos,
                     len - pos + 1,
                     origin.charAt(len - pos) == '0' ? "1" : "0");
+        } else if (even != 0) {
+            // TODO: 奇偶校验位错
+            flag = 3;
         }
+
         return sb.toString();
     }
 
 
     /**
      * 获得正确的明文
+     *
      * @param origin 正确的海明码
      * @return 正确的明文
      */
@@ -232,14 +278,39 @@ public class Hamming {
     }
 
 
+    /**
+     * 展示 Decode 结果
+     *
+     * @param origin 收到的海明码
+     * @return
+     */
     public static String showDecode(String origin) {
         String truth = truth(origin);
-        String ans = "Right Hammingway:\n" + truth
-                + "\nPos:\n" + new StringBuilder(decode(origin)).reverse()
-                + "\nOriginal Text:\n" + getTrueDs(truth);
+        String ans;
+        if (flag == 2) {
+            return "有两位错，无法纠正。";
+        } else if (flag == 3) {
+            ans = "正确的海明码：(奇偶校验位错)\n" + truth + " - " + ((tail == 0) ? "1" : "0")
+                    + "\n位置：\n" + new StringBuilder(position)
+                    + "\n原文：\n" + getTrueDs(truth);
+        } else if (flag == 1) {
+            ans = "正确的海明码：\n" + truth + " - " + tail
+                    + "\n位置：\n" + new StringBuilder(position)
+                    + "\n原文：\n" + getTrueDs(truth);
+        } else {
+            ans = "正确的海明码：\n" + truth + " - " + tail
+                    + "\n位置：\n" + new StringBuilder(position)
+                    + "\n原文：\n" + getTrueDs(truth);
+        }
         return ans;
     }
 
+    /**
+     * 预检查是否有错
+     *
+     * @param origin 输入的内容
+     * @return false 意为输入有误
+     */
     public static boolean check(String origin) {
         for (int i = 0; i < origin.length(); i++)
             if (origin.charAt(i) < '0' || origin.charAt(i) > '1')

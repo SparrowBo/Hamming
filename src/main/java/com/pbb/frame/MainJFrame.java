@@ -7,6 +7,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.net.URL;
 
 
 public class MainJFrame extends JFrame{
@@ -22,7 +23,7 @@ public class MainJFrame extends JFrame{
 
         initGUI();
 
-        setSize(300, 295);
+        setSize(300, 305);
     }
 
 
@@ -43,14 +44,17 @@ public class MainJFrame extends JFrame{
         panel.add(input);
 
         result = new JTextArea();
-        result.setBounds(25, 120, 240, 100);
+        result.setBounds(25, 120, 240, 115);
         panel.add(result);
 
         JButton btn = new JButton();
         btn.setBounds(95, 60, 90, 50);
-        btn.setIcon(new ImageIcon("src/main/java/com/pbb/frame/img/button_normal.png"));
 
-        btn.setPressedIcon(new ImageIcon("src/main/java/com/pbb/frame/img/button_press.png"));
+        btn.setIcon(new ImageIcon(MainJFrame.class.getResource("/imgs/button_normal.png")));
+//        btn.setIcon(new ImageIcon("src/main/java/com/pbb/frame/img/button_normal.png"));
+        btn.setPressedIcon(new ImageIcon(MainJFrame.class.getResource("/imgs/button_press.png")));
+//        btn.setPressedIcon(new ImageIcon("src/main/java/com/pbb/frame/img/button_press.png"));
+
 
         btn.setBorderPainted(false);
 
@@ -70,5 +74,4 @@ public class MainJFrame extends JFrame{
 
         panel.add(btn);
     }
-
 }
